@@ -177,7 +177,7 @@ const Users = mongoose.model('Users',{
 })
 
 // Creating Endpoints for registering user
-app.post('/singup', async(req,res)=>{
+app.post('/signup', async(req,res)=>{
 
     let check = await Users.findOne({email:req.body.email});
     if(check){
