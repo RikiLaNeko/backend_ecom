@@ -12,7 +12,7 @@ app.use(express.json());
 app.use(cors());
 
 //Database connection with MongoDB
-mongoose.connect("mongodb://admin:ec472291940ed1ad24339ab97e8985aff2ca40dabfb08ca9@143.198.153.140");
+mongoose.connect("mongodb://admin:27fe8999f89c044873dad6885b8a2e18a8108b878e91a8d2@167.71.1.231");
 
 //Api Creation
 app.get("/", (req,res)=>{
