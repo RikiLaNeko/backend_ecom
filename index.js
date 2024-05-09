@@ -12,7 +12,12 @@ app.use(express.json());
 app.use(cors());
 
 //Database connection with MongoDB
-mongoose.connect("mongodb://admin:27fe8999f89c044873dad6885b8a2e18a8108b878e91a8d2@167.71.1.231");
+try {
+    mongoose.connect("mongodb://admin:27fe8999f89c044873dad6885b8a2e18a8108b878e91a8d2@167.71.1.231");
+    console.log("Connected to MongoDB");
+} catch (error) {
+    console.log("Error connecting to MongoDB:", error);
+}
 
 //Api Creation
 app.get("/", (req,res)=>{
@@ -114,8 +119,6 @@ app.post('/addproduct', async(req,res)=>{
     }
 })
 
-
-
 //Creating API for deleting products
 app.post('/removeproduct', async(req,res)=>{
     try {
@@ -179,72 +182,104 @@ const Users = mongoose.model('Users',{
 // Creating Endpoints for registering user
 app.post('/signup', async(req,res)=>{
 
-    let check = await Users.findOne({email:req.body.email});
-    if(check){
-        return res.status(400).json({success:false, errors:"existing user found with this same email address"});
-    }
-    let cart= {};
-    for (let i = 0; i < 300; i++) {
-        cart[i] = 0;        
-    }
-
-    const user= new Users({
-        username: req.body.username,
-        email: req.body.email,
-        password: req.body.password,
-        cartData: cart,
-    });
-
-    await user.save();
-
-    const data ={
-        user:{
-            id: user.id,
+    try {
+        let check = await Users.findOne({email:req.body.email});
+        if(check){
+            return res.status(400).json({success:false, errors:"existing user found with this same email address"});
         }
-    }
+        let cart= {};
+        for (let i = 0; i < 300; i++) {
+            cart[i] = 0;        
+        }
 
-    const token = jwt.sign(data, "secret_ecom");
-    res.json({success:true, token});
+        const user= new Users({
+            username: req.body.username,
+            email: req.body.email,
+            password: req.body.password,
+            cartData: cart,
+        });
+
+        await user.save();
+
+        const data ={
+            user:{
+                id: user.id,
+            }
+        }
+
+        const token = jwt.sign(data, "secret_ecom");
+        res.json({success:true, token});
+    } catch (error) {
+        console.log("Error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to register user",
+        });
+    }
 
 })
 
 // Creating endpoint for user login
 app.post('/login', async(req,res)=>{
-    let user = await Users.findOne({email:req.body.email});
-    if(user){
-        const passCompare = req.body.password === user.password;
-        if (passCompare) {
-            const data ={
-                user:{
-                    id: user.id,
+    try {
+        let user = await Users.findOne({email:req.body.email});
+        if(user){
+            const passCompare = req.body.password === user.password;
+            if (passCompare) {
+                const data ={
+                    user:{
+                        id: user.id,
+                    }
                 }
+                const token = jwt.sign(data,'secret_ecom');
+                res.json({success:true, token});
             }
-            const token = jwt.sign(data,'secret_ecom');
-            res.json({success:true, token});
+            else{
+                res.status(400).json({success:false, errors:"Invalid Password"});
+            }
         }
         else{
-            res.status(400).json({success:false, errors:"Invalid Password"});
+            res.status(400).json({success:false, errors:"User not found"});
         }
-    }
-    else{
-        res.status(400).json({success:false, errors:"User not found"});
+    } catch (error) {
+        console.log("Error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to login",
+        });
     }
 })
 
 // creating endpoint for newcollection data
 app.get('/newcollections', async(req,res)=>{
-    let product = await Products.find({});
-    let newcollection = product.slice(1).slice(-8);
-    console.log("New Collection Fetched");
-    res.send(newcollection);
+    try {
+        let product = await Products.find({});
+        let newcollection = product.slice(1).slice(-8);
+        console.log("New Collection Fetched");
+        res.send(newcollection);
+    } catch (error) {
+        console.log("Error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch new collections",
+        });
+    }
 })
 
 // Creating endpoint for popular in women section
 app.get('/popularwomen', async(req,res)=>{
-    let product = await Products.find({category:"women"});
-    let popular_in_women = product.slice(0,4);
-    console.log("Popular in women fetched");
-    res.send(popular_in_women);
+    try {
+        let product = await Products.find({category:"women"});
+        let popular_in_women = product.slice(0,4);
+        console.log("Popular in women fetched");
+        res.send(popular_in_women);
+    } catch (error) {
+        console.log("Error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch popular women products",
+        });
+    }
 })
 
 //Creating middleware to fetch user
@@ -264,30 +299,54 @@ const fetchUser = async (req,res,next) => {
 }
 //Creating endpoint for adding product in cartdata
 app.post('/addtocart', fetchUser, async(req,res)=>{
-    console.log("added", req.body.itemId)
-    let userData = await Users.findOne({_id:req.user.id});
-    userData.cartData[req.body.itemId] += 1;
-    await Users.findOneAndUpdate({_id:req.user.id},{cartData:userData.cartData});
-    console.log("Added to cart" , userData.cartData[req.body.itemId]);
-    res.send("Added")
+    try {
+        console.log("added", req.body.itemId)
+        let userData = await Users.findOne({_id:req.user.id});
+        userData.cartData[req.body.itemId] += 1;
+        await Users.findOneAndUpdate({_id:req.user.id},{cartData:userData.cartData});
+        console.log("Added to cart" , userData.cartData[req.body.itemId]);
+        res.send("Added");
+    } catch (error) {
+        console.log("Error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to add product to cart",
+        });
+    }
 })
 
 //Creating endpoint for removing product from cartdata
 app.post('/removefromcart', fetchUser, async(req,res)=>{
-    console.log("removeed", req.body.itemId);
-    let userData = await Users.findOne({_id:req.user.id});
-    if(userData.cartData[req.body.itemId] >0)
-    userData.cartData[req.body.itemId] -= 1;
-    await Users.findOneAndUpdate({_id:req.user.id},{cartData:userData.cartData});
-    console.log("Removed from cart");
-    res.send("Removed");
+    try {
+        console.log("removeed", req.body.itemId);
+        let userData = await Users.findOne({_id:req.user.id});
+        if(userData.cartData[req.body.itemId] >0)
+        userData.cartData[req.body.itemId] -= 1;
+        await Users.findOneAndUpdate({_id:req.user.id},{cartData:userData.cartData});
+        console.log("Removed from cart");
+        res.send("Removed");
+    } catch (error) {
+        console.log("Error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to remove product from cart",
+        });
+    }
 })
 
 // Creating endpoint for getting cartdata
 app.post('/getcart', fetchUser, async(req,res)=>{
-    console.log("Cart Data Fetched");
-    let userData = await Users.findOne({_id:req.user.id});
-    res.json(userData.cartData);
+    try {
+        console.log("Cart Data Fetched");
+        let userData = await Users.findOne({_id:req.user.id});
+        res.json(userData.cartData);
+    } catch (error) {
+        console.log("Error:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to fetch cart data",
+        });
+    }
 })
 
 app.listen(port,(error)=>{
